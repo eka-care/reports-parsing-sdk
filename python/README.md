@@ -41,8 +41,8 @@ pip install ekacare-sdk
 ### From source
 
 ```bash
-git clone https://github.com/eka-care/ekacare-python-sdk.git
-cd ekacare-python-sdk
+git clone https://github.com/eka-care/reports-parsing-sdk.git
+cd reports-parsing-sdk/python
 pip install -e .
 ```
 
