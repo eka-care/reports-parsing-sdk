@@ -32,8 +32,8 @@ pip install ekacare-sdk
 
 Or from source:
 ```bash
-git clone https://github.com/eka-care/ekacare-python-sdk.git
-cd ekacare-python-sdk
+git clone https://github.com/eka-care/reports-parsing-sdk.git
+cd reports-parsing-sdk/python
 pip install -e .
 ```
 
@@ -67,28 +67,6 @@ sdk.close()
 Run it:
 ```bash
 python my_first_script.py
-```
-
-### Method 2: With Context Manager (Better!)
-
-Create `better_script.py`:
-
-```python
-from ekacare_sdk import EkaCareSDK
-
-# Use 'with' for automatic cleanup
-with EkaCareSDK("YOUR_CLIENT_ID", "YOUR_CLIENT_SECRET") as sdk:
-    # Process and wait for results
-    result = sdk.process_and_wait(
-        "/path/to/document.jpg",
-        task="smart"
-    )
-    
-    print("✓ Processing complete!")
-    print(f"FHIR data: {result['data'].get('fhir')}")
-    print(f"Output: {result['data'].get('output')}")
-
-# SDK automatically closed!
 ```
 
 ## Using Environment Variables (Recommended)
@@ -195,24 +173,7 @@ with EkaCareSDK("client_id", "client_secret") as sdk:
     print(f"Processing complete: {fhir_data}")
 ```
 
-### 2. Process Multiple Documents
-
-```python
-from pathlib import Path
-from ekacare_sdk import EkaCareSDK
-
-files = ["doc1.jpg", "doc2.jpg", "doc3.jpg"]
-
-with EkaCareSDK("client_id", "client_secret") as sdk:
-    for file in files:
-        try:
-            result = sdk.process_and_wait(file)
-            print(f"✓ {file}: Success")
-        except Exception as e:
-            print(f"✗ {file}: {e}")
-```
-
-### 3. Submit and Poll Manually
+### 2. Submit and Poll Manually
 
 ```python
 import time
@@ -235,24 +196,6 @@ with EkaCareSDK("client_id", "client_secret") as sdk:
         
         print("Still processing...")
         time.sleep(10)
-```
-
-### 4. Error Handling
-
-```python
-from ekacare_sdk import EkaCareSDK
-
-try:
-    with EkaCareSDK("client_id", "client_secret") as sdk:
-        result = sdk.process_and_wait("document.jpg", timeout=60)
-        print("Success!")
-        
-except FileNotFoundError:
-    print("Error: File not found")
-except TimeoutError:
-    print("Error: Processing took too long")
-except Exception as e:
-    print(f"Error: {e}")
 ```
 
 ## Directory Structure for Your Project

@@ -81,21 +81,6 @@ print(response['data'])
 sdk.close()
 ```
 
-### Using Context Manager (Recommended)
-
-```python
-from ekacare_sdk import EkaCareSDK
-
-with EkaCareSDK("client_id", "client_secret") as sdk:
-    # Process and wait for completion
-    result = sdk.process_and_wait(
-        "/path/to/document.jpg",
-        task="smart"
-    )
-    print(result['data'])
-
-# SDK automatically closed here
-```
 
 ## 📚 Usage Examples
 
