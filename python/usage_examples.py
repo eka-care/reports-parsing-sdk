@@ -3,11 +3,10 @@ Example usage scripts for Eka Care SDK.
 """
 
 import time
-from pathlib import Path
 from ekacare_sdk import EkaCareSDK
 
 
-def example_basic_usage():
+def example_basic_usage(client_id: str, client_secret: str, file_path: str):
     """Basic usage example."""
     print("="*60)
     print("Example 1: Basic Document Processing")
@@ -15,13 +14,13 @@ def example_basic_usage():
     
     # Initialize SDK
     sdk = EkaCareSDK(
-        client_id="YOUR_CLIENT_ID",
-        client_secret="YOUR_CLIENT_SECRET"
+        client_id=client_id,
+        client_secret=client_secret,
     )
     
     # Process a document
     result = sdk.process_document(
-        "/path/to/your/document.jpg",
+        file_path,
         task="smart"
     )
     
@@ -54,8 +53,8 @@ def example_with_polling(client_id: str, client_secret: str, file_path: str):
         
         if data.get("fhir") and data.get("output"):
             print("✓ Processing completed!")
-            print(f"\nFHIR data keys: {list(data['fhir'].keys())}")
-            print(f"Output data keys: {list(data['output'].keys())}")
+            print(f"\nFHIR data: {data['fhir']}")
+            print(f"Output data: {data['output']}")
             break
         
         print("Still processing...", end="\r")
@@ -77,5 +76,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Uncomment the example you want to run:
-    # example_basic_usage()
+    # example_basic_usage(args.client_id, args.client_secret, args.file_path)
     example_with_polling(args.client_id, args.client_secret, args.file_path)

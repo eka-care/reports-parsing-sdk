@@ -115,38 +115,7 @@ status = sdk.get_document_result(document_id)
 print(status)
 ```
 
-### 2. Process and Wait
-
-```python
-with EkaCareSDK("client_id", "client_secret") as sdk:
-    result = sdk.process_and_wait(
-        "/path/to/document.jpg",
-        task="smart",
-        poll_interval=5,   # Check every 5 seconds
-        timeout=300        # Wait up to 5 minutes
-    )
-    
-    if result['data'].get('fhir'):
-        print("FHIR data:", result['data']['fhir'])
-```
-
-### 3. Batch Processing
-
-```python
-from pathlib import Path
-
-files = Path("documents").glob("*.jpg")
-
-with EkaCareSDK("client_id", "client_secret") as sdk:
-    for file in files:
-        try:
-            result = sdk.process_document(str(file), task="smart")
-            print(f"✓ {file.name}: {result['document_id']}")
-        except Exception as e:
-            print(f"✗ {file.name}: {e}")
-```
-
-### 4. Using Environment Variables
+### 2. Using Environment Variables
 
 ```python
 import os
@@ -163,30 +132,6 @@ sdk = EkaCareSDK(config.client_id, config.client_secret)
 
 # Use SDK
 result = sdk.process_document("/path/to/file.jpg")
-```
-
-### 5. Error Handling
-
-```python
-from ekacare_sdk import EkaCareSDK
-from ekacare_sdk.exceptions import (
-    AuthenticationError,
-    DocumentProcessingError,
-    TimeoutError
-)
-
-try:
-    with EkaCareSDK("client_id", "client_secret") as sdk:
-        result = sdk.process_and_wait("/path/to/file.jpg", timeout=60)
-        
-except AuthenticationError as e:
-    print(f"Authentication failed: {e}")
-except FileNotFoundError as e:
-    print(f"File not found: {e}")
-except TimeoutError as e:
-    print(f"Processing timeout: {e}")
-except Exception as e:
-    print(f"Unexpected error: {e}")
 ```
 
 ## 🖥️ CLI Usage
@@ -312,11 +257,6 @@ Main SDK class for interacting with Eka Care API.
 - Returns: `dict` with processing status and data
 - Raises: `requests.exceptions.RequestException`
 
-**`process_and_wait(file_path, task="smart", poll_interval=10, timeout=300)`**
-- Process document and wait for completion
-- Returns: `dict` with complete result
-- Raises: `TimeoutError`, `FileNotFoundError`
-
 **`close()`**
 - Close the underlying HTTP session
 
@@ -332,8 +272,8 @@ Main SDK class for interacting with Eka Care API.
 
 ```bash
 # Clone repository
-git clone https://github.com/eka-care/ekacare-python-sdk.git
-cd ekacare-python-sdk
+git clone https://github.com/eka-care/reports-parsing-sdk.git
+cd reports-parsing-sdk/python
 
 # Create virtual environment
 python -m venv venv
