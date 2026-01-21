@@ -72,9 +72,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Eka Care SDK Example")
     parser.add_argument("--client-id", required=True, help="Client ID for authentication")
     parser.add_argument("--client-secret", required=True, help="Client secret for authentication")
-    parser.add_argument("--file-path", required=True, help="file path")
+    parser.add_argument("--file", required=True, help="file path")
     args = parser.parse_args()
 
     # Uncomment the example you want to run:
-    # example_basic_usage(args.client_id, args.client_secret, args.file_path)
-    example_with_polling(args.client_id, args.client_secret, args.file_path)
+    # example_basic_usage(args.client_id, args.client_secret, args.file)
+    example_with_polling(args.client_id, args.client_secret, args.file)
