@@ -1,0 +1,5 @@
+# Core dependencies
+requests>=2.28.0
+
+# Optional dependencies for development
+# Install with: pip install -r requirements-dev.txt
