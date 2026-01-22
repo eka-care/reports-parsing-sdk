@@ -44,38 +44,35 @@ public class EkaCareService {
     }
     
     /**
-     * Process a document and wait for completion
-     * This is a blocking method that polls until the document is processed
+     * Process a document and wait for completion.
+     * This is a blocking method that polls until the document is processed.
+     *
+     * @param filePath Path to the file to upload
+     * @param task Processing task - one of "smart", "pii", or "both"
+     * @param pollIntervalSeconds Seconds to wait between polling attempts
+     * @param timeoutSeconds Maximum seconds to wait for completion
+     * @return Map containing the completed processing result
+     * @throws InterruptedException if thread is interrupted during polling
+     * @throws RuntimeException if processing fails or times out
      */
-    public Map<String, Object> processDocumentAndWait(String filePath, String task, int pollIntervalSeconds) 
+    public Map<String, Object> processDocumentAndWait(String filePath, String task, int pollIntervalSeconds, int timeoutSeconds)
             throws InterruptedException {
-        
-        // Submit document
-        Map<String, Object> submitResult = sdk.processDocument(filePath, task);
-        String documentId = (String) submitResult.get("document_id");
-        
-        // Poll for results
-        while (true) {
-            Map<String, Object> result = sdk.getDocumentResult(documentId);
-            String status = (String) result.get("status");
-            
-            if ("completed".equals(status)) {
-                return result;
-            }
-            
-            if ("failed".equals(status)) {
-                throw new RuntimeException("Document processing failed");
-            }
-            
-            Thread.sleep(pollIntervalSeconds * 1000L);
-        }
+        return sdk.processAndWait(filePath, task, pollIntervalSeconds, timeoutSeconds);
     }
-    
+
     /**
-     * Process a document and wait with default 10 second interval
+     * Process a document and wait with default timeout (300 seconds)
      */
-    public Map<String, Object> processDocumentAndWait(String filePath, String task) 
+    public Map<String, Object> processDocumentAndWait(String filePath, String task, int pollIntervalSeconds)
             throws InterruptedException {
-        return processDocumentAndWait(filePath, task, 10);
+        return sdk.processAndWait(filePath, task, pollIntervalSeconds);
+    }
+
+    /**
+     * Process a document and wait with default settings (10 second interval, 300 second timeout)
+     */
+    public Map<String, Object> processDocumentAndWait(String filePath, String task)
+            throws InterruptedException {
+        return sdk.processAndWait(filePath, task);
     }
 }

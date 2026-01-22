@@ -13,12 +13,25 @@ import java.util.Map;
 
 /**
  * SDK for Eka Care Medical Records API
- * 
+ *
  * This class provides methods to interact with the Eka Care API
  * for processing medical documents.
+ *
+ * Example usage:
+ * <pre>
+ * try (EkaCareSDK sdk = new EkaCareSDK("your_client_id", "your_client_secret")) {
+ *     Map&lt;String, Object&gt; result = sdk.processDocument("/path/to/file.jpg", "smart");
+ *     System.out.println(result.get("document_id"));
+ * }
+ * </pre>
  */
-public class EkaCareSDK {
-    
+public class EkaCareSDK implements AutoCloseable {
+
+    // API Endpoints
+    private static final String AUTH_ENDPOINT = "/connect-auth/v1/account/login";
+    private static final String PROCESS_ENDPOINT = "/mr/api/v2/docs";
+    private static final String RESULT_ENDPOINT = "/mr/api/v1/docs/%s/result";
+
     private final String bearerToken;
     private final String baseUrl;
     private final RestTemplate restTemplate;
@@ -31,9 +44,9 @@ public class EkaCareSDK {
      * @param baseUrl The base URL for the API (default: https://api.eka.care)
      */
     public EkaCareSDK(String clientId, String clientSecret, String baseUrl) {
-        this.bearerToken = getAccessToken(clientId, clientSecret);
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         this.restTemplate = new RestTemplate();
+        this.bearerToken = getAccessToken(clientId, clientSecret, this.baseUrl);
     }
     
     /**
@@ -48,14 +61,15 @@ public class EkaCareSDK {
     
     /**
      * Get access token from the authentication API
-     * 
+     *
      * @param clientId The client ID
      * @param clientSecret The client secret
+     * @param baseUrl The base URL for authentication
      * @return The access token
      * @throws RuntimeException if authentication fails
      */
-    private String getAccessToken(String clientId, String clientSecret) {
-        String authUrl = "https://api.eka.care/connect-auth/v1/account/login";
+    private String getAccessToken(String clientId, String clientSecret, String baseUrl) {
+        String authUrl = baseUrl + AUTH_ENDPOINT;
         
         // Prepare request body
         Map<String, String> requestBody = new HashMap<>();
@@ -111,7 +125,7 @@ public class EkaCareSDK {
         
         // Build URL with query parameters
         UriComponentsBuilder uriBuilder = UriComponentsBuilder
-                .fromHttpUrl(baseUrl + "/mr/api/v2/docs")
+                .fromHttpUrl(baseUrl + PROCESS_ENDPOINT)
                 .queryParam("dt", docType);
         
         // Handle 'both' case with multiple task parameters
@@ -160,7 +174,7 @@ public class EkaCareSDK {
      * @return Map containing the processing result
      */
     public Map<String, Object> getDocumentResult(String documentId) {
-        String url = baseUrl + "/mr/api/v1/docs/" + documentId + "/result";
+        String url = baseUrl + String.format(RESULT_ENDPOINT, documentId);
         
         // Prepare headers
         HttpHeaders headers = new HttpHeaders();
@@ -177,5 +191,92 @@ public class EkaCareSDK {
         );
         
         return response.getBody();
+    }
+
+    /**
+     * Process a document and wait for completion.
+     *
+     * This is a convenience method that combines processDocument and polling
+     * for results in a single call.
+     *
+     * @param filePath Path to the file to upload
+     * @param task Processing task - one of "smart", "pii", or "both"
+     * @param pollIntervalSeconds Seconds to wait between polling attempts (default: 10)
+     * @param timeoutSeconds Maximum seconds to wait for completion (default: 300)
+     * @return Map containing the completed processing result
+     * @throws IllegalArgumentException if file doesn't exist or task is invalid
+     * @throws RuntimeException if processing fails or times out
+     * @throws InterruptedException if thread is interrupted during polling
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> processAndWait(String filePath, String task, int pollIntervalSeconds, int timeoutSeconds)
+            throws InterruptedException {
+        // Submit document
+        Map<String, Object> submitResult = processDocument(filePath, task);
+        String documentId = (String) submitResult.get("document_id");
+
+        // Poll for results
+        long startTime = System.currentTimeMillis();
+        long timeoutMillis = timeoutSeconds * 1000L;
+
+        while (true) {
+            // Check timeout
+            if (System.currentTimeMillis() - startTime > timeoutMillis) {
+                throw new RuntimeException("Document processing timed out after " + timeoutSeconds + " seconds");
+            }
+
+            Map<String, Object> result = getDocumentResult(documentId);
+            Map<String, Object> data = (Map<String, Object>) result.get("data");
+
+            // Check if processing is complete (both fhir and output are present)
+            if (data != null && data.containsKey("fhir") && data.containsKey("output")) {
+                return result;
+            }
+
+            // Check if processing failed
+            if ("failed".equals(result.get("status"))) {
+                throw new RuntimeException("Document processing failed");
+            }
+
+            // Wait before next poll
+            Thread.sleep(pollIntervalSeconds * 1000L);
+        }
+    }
+
+    /**
+     * Process a document and wait for completion with default timeout.
+     *
+     * @param filePath Path to the file to upload
+     * @param task Processing task - one of "smart", "pii", or "both"
+     * @param pollIntervalSeconds Seconds to wait between polling attempts
+     * @return Map containing the completed processing result
+     * @throws InterruptedException if thread is interrupted during polling
+     */
+    public Map<String, Object> processAndWait(String filePath, String task, int pollIntervalSeconds)
+            throws InterruptedException {
+        return processAndWait(filePath, task, pollIntervalSeconds, 300);
+    }
+
+    /**
+     * Process a document and wait for completion with default settings.
+     *
+     * @param filePath Path to the file to upload
+     * @param task Processing task - one of "smart", "pii", or "both"
+     * @return Map containing the completed processing result
+     * @throws InterruptedException if thread is interrupted during polling
+     */
+    public Map<String, Object> processAndWait(String filePath, String task) throws InterruptedException {
+        return processAndWait(filePath, task, 10, 300);
+    }
+
+    /**
+     * Close resources. This method is provided for compatibility but
+     * RestTemplate does not require explicit cleanup.
+     */
+    @Override
+    public void close() {
+        // RestTemplate doesn't require explicit cleanup, but this allows
+        // the SDK to be used in try-with-resources blocks for consistency
+        // with other SDK implementations.
     }
 }

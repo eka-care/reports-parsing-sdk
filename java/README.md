@@ -117,35 +117,33 @@ import java.util.Map;
 
 public class SimpleExample {
     public static void main(String[] args) throws Exception {
-        // 1. Initialize the SDK with client credentials
-        EkaCareSDK sdk = new EkaCareSDK(
-            "YOUR_CLIENT_ID", 
-            "YOUR_CLIENT_SECRET"
-        );
-        
-        // 2. Process a document
-        Map<String, Object> result = sdk.processDocument(
-            "/path/to/your/lab-report.jpg",
-            "smart"
-        );
-        
-        // 3. Get the document ID
-        String documentId = (String) result.get("document_id");
-        System.out.println("Document ID: " + documentId);
-        
-        // 4. Poll for results
-        while (true) {
-            Map<String, Object> response = sdk.getDocumentResult(documentId);
-            
-            Map<String, Object> data = (Map<String, Object>) response.get("data");
-            if (data != null && data.containsKey("fhir") && data.containsKey("output")) {
-                System.out.println("Processing complete!");
-                System.out.println("FHIR data: " + data.get("fhir"));
-                System.out.println("Output data: " + data.get("output"));
-                break;
-            }
-            
-            Thread.sleep(10000); // Wait 10 seconds
+        // Use try-with-resources for automatic cleanup
+        try (EkaCareSDK sdk = new EkaCareSDK(
+                "YOUR_CLIENT_ID",
+                "YOUR_CLIENT_SECRET")) {
+
+            // Option 1: Process and wait for completion (recommended)
+            Map<String, Object> result = sdk.processAndWait(
+                "/path/to/your/lab-report.jpg",
+                "smart",
+                10,   // poll interval in seconds
+                300   // timeout in seconds
+            );
+
+            Map<String, Object> data = (Map<String, Object>) result.get("data");
+            System.out.println("FHIR data: " + data.get("fhir"));
+            System.out.println("Output data: " + data.get("output"));
+
+            // Option 2: Manual submission and polling
+            Map<String, Object> submitResult = sdk.processDocument(
+                "/path/to/another/document.jpg",
+                "smart"
+            );
+            String documentId = (String) submitResult.get("document_id");
+
+            // Poll manually if needed
+            Map<String, Object> pollResult = sdk.getDocumentResult(documentId);
+            System.out.println("Status: " + pollResult.get("status"));
         }
     }
 }
@@ -160,19 +158,33 @@ import com.example.ekacare.service.EkaCareService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @Component
 public class MyDocumentProcessor {
-    
+
     @Autowired
     private EkaCareService ekaCareService;
-    
+
     public void processMyDocument() throws InterruptedException {
-        // Process and wait for completion
+        // Process and wait for completion with custom timeout
+        Map<String, Object> result = ekaCareService.processDocumentAndWait(
+            "/path/to/document.jpg",
+            "smart",
+            10,   // poll interval in seconds
+            300   // timeout in seconds
+        );
+
+        System.out.println("Result: " + result);
+    }
+
+    public void processWithDefaults() throws InterruptedException {
+        // Process with default settings (10s poll interval, 300s timeout)
         Map<String, Object> result = ekaCareService.processDocumentAndWait(
             "/path/to/document.jpg",
             "smart"
         );
-        
+
         System.out.println("Result: " + result);
     }
 }

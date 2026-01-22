@@ -121,22 +121,28 @@ import java.util.Map;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        // Step 1: Create SDK instance with client credentials
-        System.out.println("Authenticating...");
-        EkaCareSDK sdk = new EkaCareSDK(
-            "YOUR_CLIENT_ID", 
-            "YOUR_CLIENT_SECRET"
-        );
-        
-        // Step 2: Process a document
-        System.out.println("Processing document...");
-        Map<String, Object> result = sdk.processDocument(
-            "/path/to/your/document.jpg",
-            "smart"
-        );
-        
-        // Step 3: Print result
-        System.out.println("Success! Document ID: " + result.get("document_id"));
+        // Use try-with-resources for automatic cleanup
+        try (EkaCareSDK sdk = new EkaCareSDK(
+                "YOUR_CLIENT_ID",
+                "YOUR_CLIENT_SECRET")) {
+
+            System.out.println("Authenticating... Done!");
+
+            // Process document and wait for completion
+            System.out.println("Processing document...");
+            Map<String, Object> result = sdk.processAndWait(
+                "/path/to/your/document.jpg",
+                "smart",
+                10,   // poll every 10 seconds
+                300   // timeout after 5 minutes
+            );
+
+            // Print result
+            Map<String, Object> data = (Map<String, Object>) result.get("data");
+            System.out.println("Processing complete!");
+            System.out.println("FHIR data: " + data.get("fhir"));
+            System.out.println("Output data: " + data.get("output"));
+        }
     }
 }
 ```
@@ -173,14 +179,19 @@ public class Main {
 
 ```java
 // This is the main class that talks to Eka Care API
-// It automatically handles authentication
-EkaCareSDK sdk = new EkaCareSDK("client_id", "client_secret");
+// It automatically handles authentication and implements AutoCloseable
+try (EkaCareSDK sdk = new EkaCareSDK("client_id", "client_secret")) {
 
-// To upload a document
-Map<String, Object> result = sdk.processDocument(filePath, "smart");
+    // Option 1: Process and wait for completion (recommended)
+    Map<String, Object> result = sdk.processAndWait(filePath, "smart", 10, 300);
 
-// To check the result
-Map<String, Object> status = sdk.getDocumentResult(documentId);
+    // Option 2: Upload a document manually
+    Map<String, Object> submitResult = sdk.processDocument(filePath, "smart");
+    String documentId = (String) submitResult.get("document_id");
+
+    // Then check the result
+    Map<String, Object> status = sdk.getDocumentResult(documentId);
+}
 ```
 
 ### The Service Class (EkaCareService.java)

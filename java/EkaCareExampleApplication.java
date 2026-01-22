@@ -41,44 +41,49 @@ public class EkaCareExampleApplication implements CommandLineRunner {
             return;
         }
         
-        // Initialize the SDK with client credentials
+        // Initialize the SDK with client credentials using try-with-resources
         System.out.println("Authenticating...");
-        EkaCareSDK sdk = new EkaCareSDK(clientId, clientSecret);
 
-        try {
-            // Process a document
-            System.out.println("Submitting document for processing...");
-            Map<String, Object> result = sdk.processDocument(
-                "/path/to/your/document.jpg",
-                "smart"
+        try (EkaCareSDK sdk = new EkaCareSDK(clientId, clientSecret)) {
+            // Example 1: Process and wait for completion (recommended)
+            System.out.println("\n=== Example 1: Process and wait for completion ===");
+            System.out.println("Processing document...");
+
+            Map<String, Object> result = sdk.processAndWait(
+                    "/path/to/your/document.jpg",
+                    "smart",
+                    10,  // poll interval in seconds
+                    300  // timeout in seconds
             );
-            
-            System.out.println("Document submitted: " + result);
 
-            // Get document_id from response
-            String documentId = (String) result.get("document_id");
-            System.out.println("Polling for document: " + documentId);
-
-            // Poll for results
-            while (true) {
-                Map<String, Object> response = sdk.getDocumentResult(documentId);
-                
-                Map<String, Object> data = (Map<String, Object>) response.get("data");
-                if (data != null && data.containsKey("fhir") && data.containsKey("output")) {
-                    System.out.println("Processing completed!");
-                    System.out.println("FHIR data: " + data.get("fhir"));
-                    System.out.println("Output data: " + data.get("output"));
-                    break;
-                }
-
-                System.out.println("Waiting 10 seconds before next poll...");
-                Thread.sleep(10000); // Wait 10 seconds
+            System.out.println("Processing completed!");
+            Map<String, Object> data = (Map<String, Object>) result.get("data");
+            if (data != null) {
+                System.out.println("FHIR data: " + data.get("fhir"));
+                System.out.println("Output data: " + data.get("output"));
             }
 
+            // Example 2: Manual submission and polling (if needed)
+            System.out.println("\n=== Example 2: Manual submission and polling ===");
+            Map<String, Object> submitResult = sdk.processDocument(
+                    "/path/to/another/document.jpg",
+                    "smart"
+            );
+
+            String documentId = (String) submitResult.get("document_id");
+            System.out.println("Document submitted. ID: " + documentId);
+
+            // Poll manually if needed
+            Map<String, Object> pollResult = sdk.getDocumentResult(documentId);
+            System.out.println("Current status: " + pollResult.get("status"));
+
         } catch (IllegalArgumentException e) {
+            System.err.println("Validation error: " + e.getMessage());
+        } catch (InterruptedException e) {
+            System.err.println("Processing interrupted: " + e.getMessage());
+            Thread.currentThread().interrupt();
+        } catch (RuntimeException e) {
             System.err.println("Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.err.println("API Error: " + e.getMessage());
             e.printStackTrace();
         }
     }
